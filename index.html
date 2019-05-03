@@ -29,6 +29,13 @@
 				stroke: black;
 				stroke-width: 1.5;
 			}
+		.svg {
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				margin-left: -40%;
+				margin-top: -20%;
+		}
 		#tooltip {
 				position: absolute;
 				width: 200px;
@@ -42,31 +49,28 @@
 				-moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
 				box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
 				pointer-events: none;
+				z-index: 999;
 			}
 			
-			#tooltip.hidden {
-				display: none;
-			}
-			
-			#tooltip p {
-				margin: 0;
-				font-family: sans-serif;
-				font-size: 16px;
-				line-height: 20px;
-			}
+		#tooltip.hidden {
+			display: none;
+		}
+		
+		#tooltip p {
+			margin: 0;
+			font-family: sans-serif;
+			font-size: 16px;
+			line-height: 20px;
+		}
 	</style>
 </head>
 <body>
-	<h1 style="font-family: sans-serif;">World's natural disasters</h1>
+	<h1 style="font-family: sans-serif;text-align: center;">World's natural disasters from 1900 to 2018</h1>
+	<p style="text-align: center;"><strong>You can choose the period to show down here!(But it should in 1900-2018)</strong></p>
 	<div id="tooltip" class="hidden">
 			<p><strong><span id="value">100</span></strong></p>
 	</div>
-	<table width="500" border="0">
-		<tr>
-			<td colspan="2">
-				<p><strong>You can choose the period to show down here!</strong></p>
-			</td>
-		</tr>
+	<table width="500" border="0" style="position: absolute; left: 50%; margin-left: -100px;z-index: 999;">
 		<tr>
 			<td style="width: 150px;">				
 				<form action="">
@@ -131,7 +135,8 @@
 		var svg = d3.select("body")
 					.append("svg")
 					.attr("width", width)
-					.attr("height", height);
+					.attr("height", height)
+					.attr("class", "svg");
 		var colors = d3.scaleOrdinal(d3.schemeCategory10);
 
 		function draw() {
