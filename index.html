@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>As 2</title>
+	<script src="d3.v4.js"></script>
+	<link rel="shortcut icon" href="bitbug_favicon.ico" type="image/x-icon" />
+	<style type="text/css">
+		rect {
+				stroke: none;
+			}
+
+		rect:hover {
+				fill: yellow;
+				transition: all 0.25s;
+			}
+		.axis path,
+		.axis line{
+			fill: none;
+			stroke: black;
+			shape-rendering: crispEdges;
+		}
+		.axis text{
+			font-family: sans-serif;
+			font-size: 11px;
+		}
+		.line {
+				fill: black;
+				stroke: black;
+				stroke-width: 1.5;
+			}
+		#tooltip {
+				position: absolute;
+				width: 200px;
+				height: auto;
+				padding: 10px;
+				background-color: white;
+				-webkit-border-radius: 10px;
+				-moz-border-radius: 10px;
+				border-radius: 10px;
+				-webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+				-moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+				box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+				pointer-events: none;
+			}
+			
+			#tooltip.hidden {
+				display: none;
+			}
+			
+			#tooltip p {
+				margin: 0;
+				font-family: sans-serif;
+				font-size: 16px;
+				line-height: 20px;
+			}
+	</style>
+</head>
+<body>
+	<h1 style="font-family: sans-serif;">World's natural disasters</h1>
+	<div id="tooltip" class="hidden">
+			<p><strong><span id="value">100</span></strong></p>
+	</div>
+	<table width="500" border="0">
+		<tr>
+			<td colspan="2">
+				<p><strong>You can choose the period to show down here!</strong></p>
+			</td>
+		</tr>
+		<tr>
+			<td style="width: 150px;">				
+				<form action="">
+				First Year: <input type="text" name="FirstYear" style="width: 45px" id="FirstYear">
+				Last Year: <input type="text" name="LastYear" style="width: 46px" id="LastYear">
+				</form>
+			</td>
+			<td>
+				<button type="button">Submit</button>
+			</td>
+		</tr>
+	</table>
+	<script type="text/javascript">
+		var width = window.innerWidth*0.8,
+			height = width * 0.5,
+			padding = 65,
+			dataset,
+			gr,
+			groups,
+			rects,
+			stack,
+			series,
+			firstYear=1950,
+			lastYear=2018,
+			xScale,
+			yScale,
+			xAxis,
+			yAxis,
+			yAxisG;
+		function getPeriod(first,last) {
+			var result=[];
+			var Re=10 - (first % 10);
+			var sca=parseInt((last - first)/10);
+			result.push(0);
+			for (var i = 0; i < sca; i++) {
+				result.push(i*10+Re);
+			}
+			result.push(last - first);
+			return result;
+		};
+		function toInt(d) {
+			return d=="null" ? 0 : parseInt(d);
+		};
+		var rowConventer = function (d) {
+			if(toInt(d.Year)>=firstYear && toInt(d.Year)<=lastYear){
+			return {			
+				AllNaturalDisasters: toInt(d.AllNaturalDisasters),
+				Drought: toInt(d.Drought),
+				Earthquake: toInt(d.Earthquake),
+				ExtremeTemperature: toInt(d.ExtremeTemperature),
+				ExtremeWeather: toInt(d.ExtremeWeather),
+				Flood: toInt(d.Flood),
+				Impact: toInt(d.Impact),
+				Landslide: toInt(d.Landslide),
+				MassMovementDry: toInt(d.MassMovementDry),
+				VolcanicActivity: toInt(d.VolcanicActivity),
+				Wildfire: toInt(d.Wildfire),
+				Year: toInt(d.Year)
+			};
+		}	
+		};
+		var svg = d3.select("body")
+					.append("svg")
+					.attr("width", width)
+					.attr("height", height);
+		var colors = d3.scaleOrdinal(d3.schemeCategory10);
+
+		function draw() {
+		d3.csv("output.csv", rowConventer, function (data) {
+			dataset = data;
+			xScale = d3.scaleBand()
+				.domain(d3.range(dataset.length))
+				.range([padding, width - padding])
+				.paddingInner(0.05);
+			yScale = d3.scaleLinear()
+				.domain([0, 
+					d3.max(dataset, function (d) {
+						return d.AllNaturalDisasters;
+					})])
+				.range([height - padding, padding])
+				.nice();
+			xAxis = d3.axisBottom()
+						.scale(xScale)
+						.tickValues(getPeriod(firstYear, lastYear))
+						.tickFormat(function (d) {
+							return d + firstYear + "";
+						});
+			yAxis = d3.axisLeft()
+						.scale(yScale);
+
+			stack = d3.stack().keys(["Drought", "Earthquake", "ExtremeTemperature", "ExtremeWeather", "Flood", "Impact", "Landslide", "MassMovementDry", "VolcanicActivity", "Wildfire"]);
+			series = stack(dataset);
+			gr = svg.append("g");
+			groups = gr.selectAll("g")
+			.data(series)
+			.enter()
+			.append("g")
+			.style("fill", function(d, i) {
+				return colors(i);
+			})
+			.attr("class", "groups");
+			rects = groups.selectAll("rect")
+				.data(function(d) { return d; })
+				.enter()
+				.append("rect")
+				.attr("x", function(d, i) {
+					return xScale(i);
+				})
+				.attr("y", function(d) {
+					return yScale(d[1]);
+				})
+				.attr("height", function(d) {
+					return yScale(d[0]) - yScale(d[1]);
+				})
+				.attr("width", xScale.bandwidth())
+				.attr("class", "Rect")
+				.on("mousemove", function(d) {
+
+					//Get this bar's x/y values, then augment for the tooltip
+					/*var xPosition = parseFloat(d3.select(this).attr("x")) + xScale.bandwidth() / 2;
+					var yPosition = parseFloat(d3.select(this).attr("y")) / 2 + height / 2;*/
+					var xPosition = event.screenX+5;
+					var yPosition = event.screenY-150;
+					var rect = this.parentNode;// the rectangle, parent of the title
+
+					//Update the tooltip position and value
+					d3.select("#tooltip")
+						.style("left", xPosition + "px")
+						.style("top", yPosition + "px")						
+						.select("#value")
+						.text(function () {
+							return d.data.Year+ ", " + d3.select(rect).datum().key + "," + (d[1]-d[0]);
+						});
+			   
+					//Show the tooltip
+					d3.select("#tooltip").classed("hidden", false);
+
+			   })
+			   .on("mouseout", function() {
+			   
+					//Hide the tooltip
+					d3.select("#tooltip").classed("hidden", true);
+					
+			   });
+			var legend = svg.append("g")
+							.attr("class", "legend")
+							.attr("x", width - padding)
+							.attr("y", padding)
+							.attr("height", 100)
+							.attr("width", 100);
+			legend.selectAll("g")
+					.data(series)
+					.enter()
+					.append("g")
+					.each(function (d, i) {
+						var g = d3.select(this);
+						g.append("rect")
+							.attr("x", 2*padding)
+							.attr("y", function () {
+								return padding + (series.length-i) * 25;
+							})
+							.attr("width", 18)
+							.attr("height", 18)
+							.style("fill", colors(i));
+						g.append("text")
+							.attr("x", 2*padding + 25)
+							.attr("y", function () {
+								return padding + (series.length-i) * 25 + 15;
+							})
+							.text(function () {
+								return series[i].key;
+							})
+							.attr("font-family", "sans-serif")
+			   				.attr("font-size", "18px");
+					});
+			legend.selectAll("g")
+				.on("mouseover", function (d) {
+					legend.selectAll("g")
+						.style("opacity", 0.1);
+					d3.select(this)
+						.style("opacity", 1);
+					d3.selectAll(".Rect")
+						//.data(dataset)
+						.each(function () {
+							var g = d3.select(this);
+							var gg = this.parentNode;
+							g.style("opacity", function () {
+							return d3.select(gg).datum().key==d.key ? 1 : 0.1;
+						})
+						})
+				})
+				.on("mouseout", function (d) {
+					legend.selectAll("g")
+						.style("opacity", 1);
+					d3.selectAll(".Rect")
+						.style("opacity", 1);
+				});
+			svg.append("g")
+				.attr("class", "axis")
+				.attr("transform", "translate(" + 0 + ", " + (height - padding) + ")")
+				.attr("id", "xAxisG")
+				.call(xAxis);
+			yAxisG = svg.append("g")
+				.attr("class", "axis")
+				.attr("transform", "translate(" + (padding) + ", 0)")
+				.attr("id", "yAxisG")
+				.call(yAxis);
+			d3.select("button")
+				.on("click", choosePeriod);
+			yAxisG.selectAll(".tick")
+				.on("mouseover", function (d) {
+					svg.append("line")
+						.attr("class", "line")
+						.attr("x1", padding)
+						.attr("x2", width - padding)
+						.attr("y1", yScale(d))
+						.attr("y2", yScale(d))
+						.attr("id", "line");
+				})
+				.on("mouseout", function (d) {
+					d3.select("#line").remove();
+				});
+		});
+	}
+	draw();//first time to draw
+
+	function choosePeriod() {
+		firstYear = parseInt(document.getElementById("FirstYear").value);
+		lastYear = parseInt(document.getElementById("LastYear").value);
+		d3.csv("output.csv", rowConventer, function (newdata) {
+			dataset = newdata;
+			xScale.domain(d3.range(dataset.length));
+			yScale.domain([0, 
+					d3.max(dataset, function (d) {
+						return d.AllNaturalDisasters;
+					})])
+					.nice();
+			xAxis.scale(xScale)
+					.tickValues(getPeriod(firstYear, lastYear))
+					.tickFormat(function (d) {
+						return d + firstYear + "";
+					});
+			yAxis.scale(yScale);
+			d3.select("#xAxisG")
+				.transition()
+				.duration(1000)
+				.call(xAxis);
+			d3.select("#yAxisG")
+				.transition()
+				.duration(1000)
+				.call(yAxis);
+			yAxisG.selectAll(".tick")
+				.on("mouseover", function (d) {
+					svg.append("line")
+						.attr("class", "line")
+						.attr("x1", padding)
+						.attr("x2", width - padding)
+						.attr("y1", yScale(d))
+						.attr("y2", yScale(d))
+						.attr("id", "line");
+				})
+				.on("mouseout", function (d) {
+					d3.select("#line").remove();
+				});
+			series=stack(dataset);
+			groups.data(series);
+			var use = groups.selectAll("rect")
+				.data(function (d) {
+					return d;
+				});
+				//update
+				use.transition()
+				.delay(function (d,i) {
+					return i * 50;
+				})
+				.duration(1000)
+				.attr("x", function(d, i) {
+					return xScale(i);
+				})
+				.attr("y", function(d) {
+					return yScale(d[1]);
+				})
+				.attr("height", function(d) {
+					return yScale(d[0]) - yScale(d[1]);
+				})
+				.attr("width", xScale.bandwidth());
+				//enter
+				use.enter()
+				.append("rect")
+				.transition()
+				.delay(function (d,i) {
+					return i * 50;
+				})
+				.duration(1000)
+				.attr("x", function(d, i) {
+					return xScale(i);
+				})
+				.attr("y", function(d) {
+					return yScale(d[1]);
+				})
+				.attr("height", function(d) {
+					return yScale(d[0]) - yScale(d[1]);
+				})
+				.attr("width", xScale.bandwidth())
+				.attr("class", "Rect");
+				//exit
+				use.exit()
+					.transition()
+					.delay(function (d,i) {
+					return i * 50;
+				})
+					.duration(1000)
+					.remove();
+				//tooltip	
+				groups.selectAll("rect")
+						.on("mousemove", function(d) {
+
+							//Get this bar's x/y values, then augment for the tooltip
+							var xPosition = event.screenX+5;
+							var yPosition = event.screenY-150;
+							var rect = this.parentNode;// the rectangle, parent of the title
+
+							//Update the tooltip position and value
+							d3.select("#tooltip")
+								.style("left", xPosition + "px")
+								.style("top", yPosition + "px")						
+								.select("#value")
+								.text(function () {
+									return d.data.Year+ ", " + d3.select(rect).datum().key + "," + (d[1]-d[0]);
+								});
+					   
+							//Show the tooltip
+							d3.select("#tooltip").classed("hidden", false);
+
+					   })
+					   .on("mouseout", function() {
+					   
+							//Hide the tooltip
+							d3.select("#tooltip").classed("hidden", true);
+							
+					   });
+
+		})
+	}
+	</script>
+</body>
+</html>
