@@ -301,7 +301,7 @@
 	function choosePeriod() {
 		firstYear = parseInt(document.getElementById("FirstYear").value);
 		lastYear = parseInt(document.getElementById("LastYear").value);
-		if(firstYear>=1900 && lastYear<=2018){
+		if(firstYear>=1900 && lastYear<=2018 && lastYear >= firstYear){
 		d3.csv("output.csv", rowConventer, function (newdata) {
 			dataset = newdata;
 			xScale.domain(d3.range(dataset.length));
