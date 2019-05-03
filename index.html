@@ -301,6 +301,7 @@
 	function choosePeriod() {
 		firstYear = parseInt(document.getElementById("FirstYear").value);
 		lastYear = parseInt(document.getElementById("LastYear").value);
+		if(firstYear>=1900 && lastYear<=2018){
 		d3.csv("output.csv", rowConventer, function (newdata) {
 			dataset = newdata;
 			xScale.domain(d3.range(dataset.length));
@@ -415,6 +416,10 @@
 					   });
 
 		})
+	}
+	else{
+		alert("The period is illeagal!");
+	}
 	}
 	</script>
 </body>
